@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <title>EneMA - ENEro Mes Autoral 2026</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+
+  <script>
+    window.misterioo = 'NzY37KOwPCdenCenH7WtfQ5H3epr/KoT7qHfHHWZHOWAAxcrXjE6VoJmpLqKmJz0Ms/Gi+cXOLXwzy34lyqOqHVk+UWJItJyLQ==';
+
+    async function obtenerMisterio(str) {
+        try {
+        var resultado = await decrypt(window.misterioo, str);
+        if(resultado.includes("https")) {
+            return resultado;
+        }
+        else {
+            return null;
+        }
+        } catch (e) {
+            return null;
+        }
+     }
+
+     function quieroObtenerLinkDiscord() {
+        document.querySelector("#advinacionSpan").style.display = 'block'; 
+     }
+
+     async function puseLaRespuesta() {
+        const inputValue = document.querySelector('#adivinacion').value;
+        const resultado = await obtenerMisterio(inputValue);
+        if(resultado) {
+            document.querySelector('#link').style.display = 'block'; 
+            document.querySelector('#link').setAttribute("href", resultado);
+            document.querySelector('#link').textContent =  resultado;
+        } else {
+            document.querySelector('#link').style.display = 'block'; 
+            document.querySelector('#link').setAttribute("href", "https://www.disney.com/");
+            document.querySelector('#link').textContent =  "Seguí participando";
+        }
+     }
+
+
+    // Convert a string to an ArrayBuffer
+function stringToArrayBuffer(str) {
+    const encoder = new TextEncoder();
+    return encoder.encode(str);
+}
+
+// Convert an ArrayBuffer to a string
+function arrayBufferToString(buffer) {
+    const decoder = new TextDecoder();
+    return decoder.decode(buffer);
+}
+
+// Convert a string to a CryptoKey for password derivation
+async function getKeyFromPassword(password, salt) {
+    const passwordBuffer = stringToArrayBuffer(password);
+    const keyMaterial = await crypto.subtle.importKey(
+        'raw',
+        passwordBuffer,
+        'PBKDF2',
+        false,
+        ['deriveKey']
+    );
+    
+    return crypto.subtle.deriveKey(
+        {
+            name: 'PBKDF2',
+            salt: salt,
+            iterations: 100000,
+            hash: 'SHA-256'
+        },
+        keyMaterial,
+        {
+            name: 'AES-GCM',
+            length: 256
+        },
+        false,
+        ['encrypt', 'decrypt']
+    );
+}
+
+// Encrypt a string
+async function encrypt(decrypted_string, password) {
+    try {
+        // Generate a random salt and IV
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        
+        // Derive key from password
+        const key = await getKeyFromPassword(password, salt);
+        
+        // Encrypt the data
+        const encryptedData = await crypto.subtle.encrypt(
+            {
+                name: 'AES-GCM',
+                iv: iv
+            },
+            key,
+            stringToArrayBuffer(decrypted_string)
+        );
+        
+        // Combine salt, iv, and encrypted data into a single ArrayBuffer
+        const combined = new Uint8Array(salt.length + iv.length + encryptedData.byteLength);
+        combined.set(salt, 0);
+        combined.set(iv, salt.length);
+        combined.set(new Uint8Array(encryptedData), salt.length + iv.length);
+        
+        // Convert to base64 for easy storage/transmission
+        return btoa(String.fromCharCode.apply(null, combined));
+    } catch (error) {
+        console.error('Encryption error:', error);
+        throw error;
+    }
+}
+
+// Decrypt a string
+async function decrypt(encrypted_string, password) {
+    try {
+        // Convert from base64 to ArrayBuffer
+        const binaryString = atob(encrypted_string);
+        const combined = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            combined[i] = binaryString.charCodeAt(i);
+        }
+        
+        // Extract salt, iv, and encrypted data
+        const salt = combined.slice(0, 16);
+        const iv = combined.slice(16, 28);
+        const encryptedData = combined.slice(28);
+        
+        // Derive key from password
+        const key = await getKeyFromPassword(password, salt);
+        
+        // Decrypt the data
+        const decryptedData = await crypto.subtle.decrypt(
+            {
+                name: 'AES-GCM',
+                iv: iv
+            },
+            key,
+            encryptedData
+        );
+        
+        // Convert back to string
+        return arrayBufferToString(decryptedData);
+    } catch (error) {
+        console.error('Decryption error:', error);
+        throw new Error('Decryption failed - incorrect password or corrupted data');
+    }
+}
+
+  </script>
+
+
+<style>
+.container {
+  display: flex;
+  justify-content: center;  /* horizontal centering */
+  align-items: center;      /* vertical centering (optional) */
+  flex-direction: column;
+  width: 100%
+}
+
+.container div {
+    padding-left: 5px;
+    padding-right: 5px;
+}
+.viewport-height {
+  width: 100%;
+  height: 30vh;          /* 50% of viewport height */
+  object-fit: contain;   /* Adjusts to fit within height */
+}
+
+.categoria {
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.rainbow-text {
+  background: linear-gradient(
+    90deg,
+    #ff0000, #ff9900, #ffff00, 
+    #00ff00, #0099ff, #6600ff, #ff00ff
+  );
+  background-size: 400% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: rainbow-flow 5s linear infinite;
+}
+
+@keyframes rainbow-flow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 400% 50%; }
+}
+
+</style>
+
+  <body>
+    <article>
+        <div class="container">
+            <div>
+                <img src="enema_full_cropped.svg" class="viewport-height"></img>
+            </div>
+            <div>
+                <h1 style="text-align: center">EneMA - ENEro Mes Autoral</h1>
+                <h2 style="text-align: center">Edición 2026</h2>
+            </div>
+            <div>
+                <h3>¿Cómo participar?</h3> 
+                <p>Simple, tenés que elegir un proyecto para el mes dentro de estas categorías, y cumplir con la consigna diaria, del 2 al 31 de enero:</p>
+                <div class="categoria">
+                    <b>CATEGORÍA NOVELA:</b> Escribir un mínimo de 1000 palabras diarias, 30.000 palabras al final del mes. Es la extensión de una novela corta, pero bien puede ser parte de un proyecto más extenso.
+                    <br>
+                </div>
+                <div class="categoria">
+                    <b>CATEGORÍA POESÍA:</b> Escribir 1 poema diario. Valen letras de canción, para quien se anime. Si vas a hacer un proyecto de narrativa en verso o algo así más loco, avisanos y acordamos un esquema de trabajo.
+                                    <br>
+                </div>
+                <div class="categoria">
+                <b>CATEGORÍA ENSAYO/ACADÉMICA:</b> Escribir un mínimo de 500 palabras diarias.
+                                    <br>
+                </div>
+                <div class="categoria">
+                <b><span class="rainbow-text">¡NUEVO!</span> CATEGORÍA TALLER:</b> Escribir un relato diario de un mínimo de 1000 palabras que cumpla con la consigna del día.
+                                    <br>
+                </div>
+                Si acaso tenés un substack, blog o lo que fuere que soporte RSS, y si acaso querés compartir tus cacas con el mundo, podés pasarnos el link y te incluimos en esta página.
+                </p>
+
+                <h3>Links</h3>
+                <ul>
+                    <li>
+                        <a href="https://bsky.app/profile/enema.ar">Bluesky</a>
+                    </li>
+                    <li>
+                        <a href="https://www.instagram.com/enema_ar">Instagram</a>
+                    </li>
+                    <li>
+                        <button onclick="quieroObtenerLinkDiscord()">Quiero ver el link de discord</button>
+                        <form id="myForm">
+                            <span style="display:none" id="advinacionSpan">Como le decimos en argentina al sandwich de chorizo (minuscula sin tilde): <input type="text" id="adivinacion" onenter="puseLaRespuesta()"/> <button onclick="puseLaRespuesta()">le decimos asi</button></span>
+                            <a style="display:none; font-size: xx-large" href="" id="link"/>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </article>
+    <script>
+        const form = document.getElementById('myForm');
+        
+        // Handle form submission
+        form.addEventListener('submit', (event) => {
+            event.preventDefault(); // Prevent page reload
+            
+            puseLaRespuesta();
+        });
+    </script>
+  </body>
+</html>
