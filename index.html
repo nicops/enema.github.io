@@ -4,7 +4,8 @@
     <meta charset="utf-8"/>
     <title>EneMA - ENEro Mes Autoral 2026</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-  </head>
+
+</head>
 
   <script>
     window.misterioo = 'NzY37KOwPCdenCenH7WtfQ5H3epr/KoT7qHfHHWZHOWAAxcrXjE6VoJmpLqKmJz0Ms/Gi+cXOLXwzy34lyqOqHVk+UWJItJyLQ==';
@@ -152,6 +153,175 @@ async function decrypt(encrypted_string, password) {
     }
 }
 
+
+
+        // Main RSS feed fetching function
+        async function fetchRSSFeeds(urls, containerId) {
+            const container = document.getElementById(containerId);
+            const status = document.getElementById('status');
+            
+            // Clear container and show loading state
+            container.innerHTML = '';
+            status.textContent = 'Fetching RSS feeds...';
+            status.className = 'status loading';
+            
+            // Validate URLs
+            const urlList = urls
+                .map(url => url.trim())
+                .filter(url => url.length > 0 && (url.startsWith('http://') || url.startsWith('https://')));
+            
+            if (urlList.length === 0) {
+                status.textContent = 'Please enter valid RSS feed URLs.';
+                status.className = 'status error';
+                return;
+            }
+            
+            // Array to hold all feed items
+            let allFeedItems = [];
+            
+            // Fetch each feed
+            try {
+                for (const url of urlList) {
+                    try {
+                        const feedItems = await fetchFeed(url);
+                        allFeedItems = allFeedItems.concat(feedItems);
+                    } catch (error) {
+                        console.error(`Error fetching feed from ${url}:`, error);
+                        // Continue with other feeds even if one fails
+                    }
+                }
+                
+                if (allFeedItems.length === 0) {
+                    status.textContent = 'No feed items found or all feeds failed to load.';
+                    status.className = 'status error';
+                    return;
+                }
+                
+                // Sort by date (newest first)
+                allFeedItems.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+                
+                // Render feed items
+                renderFeedItems(allFeedItems, container);
+                
+                status.textContent = `Successfully loaded ${allFeedItems.length} items from ${urlList.length} feed(s).`;
+                status.className = 'status success';
+                
+            } catch (error) {
+                console.error('Error fetching RSS feeds:', error);
+                status.textContent = 'Error fetching feeds. Check console for details.';
+                status.className = 'status error';
+            }
+        }
+        
+        // Fetch and parse a single RSS feed
+        async function fetchFeed(url) {
+            // Use a CORS proxy to avoid cross-origin issues
+            // Note: In production, you should use your own proxy or a reliable service
+            const proxyUrl = 'https://api.allorigins.win/get?url=';
+            const encodedUrl = encodeURIComponent(url);
+            
+            const response = await fetch(proxyUrl + encodedUrl);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // Parse the XML content
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(data.contents, "text/xml");
+            
+            // Check if it's RSS or Atom
+            const isRSS = xmlDoc.querySelector('rss');
+            const isAtom = xmlDoc.querySelector('feed');
+            
+            let items = [];
+            
+            if (isRSS) {
+                // Parse RSS format
+                const itemElements = xmlDoc.querySelectorAll('item');
+                items = Array.from(itemElements).map(item => ({
+                    title: item.querySelector('title')?.textContent || 'No title',
+                    link: item.querySelector('link')?.textContent || '#',
+                    description: item.querySelector('description')?.textContent || '',
+                    pubDate: item.querySelector('pubDate')?.textContent || item.querySelector('date')?.textContent || new Date().toISOString(),
+                    source: xmlDoc.querySelector('channel > title')?.textContent || new URL(url).hostname
+                }));
+            } else if (isAtom) {
+                // Parse Atom format
+                const entryElements = xmlDoc.querySelectorAll('entry');
+                items = Array.from(entryElements).map(entry => ({
+                    title: entry.querySelector('title')?.textContent || 'No title',
+                    link: entry.querySelector('link')?.getAttribute('href') || '#',
+                    description: entry.querySelector('summary')?.textContent || entry.querySelector('content')?.textContent || '',
+                    pubDate: entry.querySelector('updated')?.textContent || entry.querySelector('published')?.textContent || new Date().toISOString(),
+                    source: xmlDoc.querySelector('feed > title')?.textContent || new URL(url).hostname
+                }));
+            } else {
+                throw new Error('Unsupported feed format');
+            }
+            
+            return items;
+        }
+        
+        // Render feed items to the container
+        function renderFeedItems(feedItems, container) {
+            if (feedItems.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No feed items found</h3>
+                        <p>No items could be loaded from the provided RSS feeds.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            
+            feedItems.forEach(item => {
+                // Format date
+                let dateStr = 'Unknown date';
+                try {
+                    const date = new Date(item.pubDate);
+                    dateStr = date.toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                } catch (e) {
+                    // Use raw date string if parsing fails
+                    dateStr = item.pubDate;
+                }
+                
+                // Truncate description
+                const maxDescriptionLength = 200;
+                let description = item.description || '';
+                if (description.length > maxDescriptionLength) {
+                    description = description.substring(0, maxDescriptionLength) + '...';
+                }
+                
+                // Clean up HTML tags in description
+                description = description.replace(/<[^>]*>/g, '<br />');
+                
+                html += `
+                    <div class="feed-item">
+                        <h3 class="feed-title">
+                            <a href="${item.link}" target="_blank" rel="noopener noreferrer">${item.title}</a>
+                        </h3>
+                        <div class="feed-description">${description}</div>
+                        <div class="feed-meta">
+                            <span class="feed-source">${item.source}</span>
+                            <span class="feed-date">${dateStr}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
   </script>
 
 
@@ -197,6 +367,72 @@ async function decrypt(encrypted_string, password) {
   100% { background-position: 400% 50%; }
 }
 
+
+        
+        #feedContainer {
+            background-color: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        .feed-item {
+            border-bottom: 1px solid #f1f1f1;
+            padding: 20px 0;
+            transition: background-color 0.2s;
+        }
+        
+        .feed-item:hover {
+            background-color: #f9f9f9;
+            padding-left: 10px;
+            padding-right: 10px;
+            margin: 0 -10px;
+            border-radius: 6px;
+        }
+        
+        .feed-item:last-child {
+            border-bottom: none;
+        }
+        
+        .feed-title {
+            font-size: 1.3rem;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+        
+        .feed-title a {
+            color: inherit;
+            text-decoration: none;
+        }
+        
+        .feed-title a:hover {
+            color: #3498db;
+            text-decoration: underline;
+        }
+        
+        .feed-description {
+            color: #555;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        
+        .feed-meta {
+            display: flex;
+            justify-content: space-between;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+        
+        .feed-source {
+            font-weight: 600;
+            color: #3498db;
+        }
+        
+        .feed-date {
+            font-style: italic;
+        }
+
 </style>
 
   <body>
@@ -234,6 +470,9 @@ async function decrypt(encrypted_string, password) {
                 <h3>Links</h3>
                 <ul>
                     <li>
+                        <a href="rss.html">RSS Reader de posts asociados a EneMA</a>
+                    </li>
+                    <li>
                         <a href="https://bsky.app/profile/enema.ar">Bluesky</a>
                     </li>
                     <li>
@@ -243,7 +482,7 @@ async function decrypt(encrypted_string, password) {
                         <button onclick="quieroObtenerLinkDiscord()">Quiero ver el link de discord</button>
                         <form id="myForm">
                             <span style="display:none" id="advinacionSpan">Como le decimos en argentina al sandwich de chorizo (minuscula sin tilde): <input type="text" id="adivinacion" onenter="puseLaRespuesta()"/> <button onclick="puseLaRespuesta()">le decimos asi</button></span>
-                            <a style="display:none; font-size: xx-large" href="" id="link"/>
+                            <a style="display:none; font-size: xx-large" href="" id="link"></a> 
                         </form>
                     </li>
                 </ul>
